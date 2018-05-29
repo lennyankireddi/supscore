@@ -1,0 +1,72 @@
+<div class="container-fluid scorecard-container">
+    <div class="row vendor-banner">
+        <div class="col-md-2 vendor-title"></div>
+        <div class="col-md-2 reporting-period"></div>
+        <div class="col-md-3"></div>
+        <div class="col-md-3 vendor-health"></div>
+        <div class="col-md-2 vendor-attributes">
+            <div class="vendor-segment"></div>
+            <div class="vendor-category"></div>
+        </div>
+    </div>
+    <div class="row viz-container">
+        <div class="col-md-5 left-viz-container">
+            <div class="viz-group">
+                <div class="viz-group-header" style="background-color: #004C97">FINANCIAL</div>
+                <div class="container viz-field">
+                    <div class="row">
+                        <div class="viz-box year-spend-box col-md-5 col-sm-12">
+                            <div class="year-spend-title">PREVIOUS 12 MONTHS</div>
+                            <div>
+                                <!-- <span class="year-spend-prefix">$</span> -->
+                                <span class="year-spend-number"></span>
+                                <!-- <span class="year-spend-suffix">M USD</span> -->
+                            </div>
+                        </div>
+                        <div class="viz-box spend-pct-box col-md-5 col-sm-12">
+                            <canvas id="spendPctPie" width="200" height="300">
+                            </canvas>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="viz-box quarter-spend-box col-md-6 col-sm-12">
+                            <div class="year-spend-title">BY QUARTER (MILLIONS)</div>
+                            <div class="quarter-spend-chart">
+                                <canvas id="qtSpendBar" width="90%"></canvas>
+                            </div>
+                        </div>
+                        <div class="viz-box spend-pct-box col-md-5 col-sm-12">
+                            <div class="year-spend-title">SUPPLIER REVENUE (MILLIONS)</div>
+                            <div class="supp-rev-number"></div>
+                            <div class="supp-rev-chart">
+                                <canvas id="suppRevPie" width="90%"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-7 right-viz-container">
+            <div class="viz-group">
+                <div class="viz-group-header" style="background-color: #A31637">PERFORMANCE</div>
+                <div class="viz-field">
+                    
+                </div>
+            </div>
+            <div class="viz-group">
+                <div class="viz-group-header" style="background-color: #658D1B">COMMENTS</div>
+                <div class="viz-field">
+                    
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    $(document).ready(function() {
+        var supplierId = GetQueryStringParameter('id');
+        if (supplierId) {
+            LoadSupplierData(supplierId);
+        }
+    });
+</script>

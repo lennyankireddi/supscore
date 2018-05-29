@@ -1,0 +1,71 @@
+<div class="supplier-id-gen">
+    <div class="help-text">
+        Ensure that all suppliers in the master list have unique ID
+    </div>
+    <div class="gen-container">
+        <input type="button" value="Ensure Unique IDs" id="ensureIds" class="ensure-ids-button"/>
+        <i class="fa fa-spinner fa-pulse" style="display: none;" id="showWait"></i>
+    </div>
+    <div class="process-message">
+    </div>
+</div>
+<script>
+    function GenerateID() {
+        var date = new Date();
+        return "" + date.getFullYear() + date.getMonth() + date.getDate() + date.getHours() + date.getMinutes() + date.getSeconds() + date.getMilliseconds();
+    }
+
+    $("#ensureIds").on("click", function() {
+        $("#showWait").show();
+        var supplierUrl = _spPageContextInfo.siteAbsoluteUrl + "/_api/web/lists/getbytitle('IS Supplier Segments')/items?$select=Title,SupplierID&$top=1000";
+        $.ajax({
+            url: supplierUrl,
+            method: "GET",
+            headers: {
+                "accept": "application/json;odata=verbose"
+            },
+            success: function(data) {
+                $.each(data.d.results, function(i, supplier) {
+                    if (!supplier.SupplierID) {
+                        console.log("Adding unique ID for " + supplier.Title);
+                        $(".process-message").text("Adding unique ID for " + supplier.Title);
+                        var payload = {
+                            "__metadata": {
+                                "type": "SP.Data.IS_x0020_Supplier_x0020_SegmentsListItem"
+                            },
+                            "SupplierID": GenerateID()
+                        }
+                        var updateUrl = supplier.__metadata.uri;
+                        $.ajax({
+                            url: updateUrl,
+                            method: "POST",
+                            data: JSON.stringify(payload),
+                            headers: {
+                                "accept": "application/json;odata=verbose",
+                                "X-RequestDigest": jQuery("#__REQUESTDIGEST").val(),
+                                "content-type": "application/json;odata=verbose",
+                                "X-HTTP-Method": "MERGE",
+                                "If-Match": "*"
+                            },
+                            success: function(data) {
+                                console.log("Done.");
+                                $(".process-message").text("Done.");
+                            },
+                            error: function(err) {
+                                $(".process-message").text("Failed.");
+                                console.log(JSON.stringify(err));
+                            }
+                        });
+                    }
+                });
+                $("#showWait").hide();
+                $(".process-message").text("Done ensuring unique IDs on all suppliers.");
+            },
+            error: function(err) {
+                console.log(JSON.stringify(err));
+                $("#showWait").hide();
+                $(".process-message").text(err.message);
+            }
+        });
+    });
+</script>

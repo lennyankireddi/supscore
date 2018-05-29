@@ -1,0 +1,107 @@
+/* Styles for the Astellas VSM Supplier Scorecard */
+
+/* Vendor table styles start */
+.vendor-list-container {
+    font-size: 12px;
+}
+#vendorTable {
+    width: 100%;
+}
+#vendorTable thead {
+    background-color: #956889;
+    color: #EFEBED;
+}
+#vendorTable tr.odd {
+    background-color: #DDD4DA;
+}
+#vendorTable tr.even {
+    background-color: #EFEBED;
+}
+.vendor-list-container select {
+    border: 1px solid #DDD4DA;
+}
+.vendor-list-container select:focus {
+    outline: none;
+}
+.dataTables_wrapper .dataTables_filter input {
+    border: 1px solid #DDD4DA;
+}
+.dataTables_wrapper .dataTables_filter input:focus {
+    outline: none;
+}
+.sentiment-icon {
+    width: 16px;
+}
+/* Vendor table styles end */
+
+/* Supplier page styles start */
+
+.vendor-banner {
+    background-color: #555;
+    color: white;
+    padding: 10px 20px;
+}
+.vendor-title {
+    font-size: 30px;
+}
+
+.viz-container {
+    background-color: #EEE;
+}
+.viz-group {
+    margin-top: 10px;
+    margin-bottom: 10px;
+}
+.viz-group-header {
+    padding: 20px;
+    font-size: 16px;
+    color: white;
+}
+.viz-field {
+    background-color: white;
+    min-height: 100px;
+}
+.viz-box {
+    padding: 10px;
+}
+.year-spend-box {
+    text-align: center;
+}
+.year-spend-title {
+    color: #888;
+}
+.year-spend-prefix {
+    color: #004C97;
+    font-size: 30px;
+}
+.year-spend-number {
+    color: #004C97;
+    font-size: 30px;
+}
+.year-spend-suffix {
+    color: #004C97;
+    font-size: 30px;
+}
+.supp-rev-number {
+    color: rgba(163, 22, 55, 1);
+    text-align: center;
+    font-size: 20px;
+    font-weight: bold;
+}
+/* Supplier page styles end */
+
+
+/* Admin page styles start */
+.help-text {
+    font-size: 12px;
+    color: #333;
+}
+.gen-container {
+    margin-top: 10px;
+}
+.process-message {
+    margin-top: 10px;
+    font-size: 10px;
+    color: #888;
+}
+/* Admin page styles end */

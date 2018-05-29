@@ -1,0 +1,6 @@
+{
+    "sourceDirectory": "src",
+    "sharePointSiteUrl": "https://slalomchicandc.sharepoint.com/sites/astellasvsm",
+    "publishingScope": "SaveOnly",
+    "authenticationType": "Digest"
+}

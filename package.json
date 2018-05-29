@@ -1,0 +1,41 @@
+{
+  "name": "supscore",
+  "version": "1.0.0",
+  "description": "Supplier Scorecard",
+  "main": "index.html",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lennyankireddi/supscore.git"
+  },
+  "keywords": [
+    "Astellas",
+    "Vendor",
+    "Supplier",
+    "Management",
+    "Scorecard",
+    "Dashboard",
+    "Spend",
+    "Performance",
+    "CSAT"
+  ],
+  "author": "Lenny Ankireddi",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/lennyankireddi/supscore/issues"
+  },
+  "homepage": "https://github.com/lennyankireddi/supscore#readme",
+  "dependencies": {
+    "bootstrap": "^4.1.1",
+    "chart.js": "^2.7.2",
+    "chartjs": "^0.3.24",
+    "datatables.net-bs4": "^1.10.16",
+    "datatables.net-dt": "^1.10.16",
+    "font-awesome": "^4.7.0",
+    "jquery": "^3.3.1",
+    "moment": "^2.22.1",
+    "popper.js": "^1.14.3"
+  }
+}
