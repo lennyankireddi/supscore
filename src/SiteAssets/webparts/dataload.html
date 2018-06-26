@@ -1,6 +1,32 @@
-<input type="button" class="data-load-button" id="dataLoadButton" value="Load Data" />
+<table border="0">
+    <tr>
+        <td colspan="2">
+            Select a datasheet to load data from and click the "Load" button
+        </td>
+    </tr>
+    <tr>
+        <td>
+            <select id="datasheetSelect" class="form-control">
+                <option value=""></option>
+            </select>
+        </td>
+        <td>
+            <input type="hidden" id="datasheetUrlHidden" value="" />
+            <input type="button" class="data-load-button btn btn-default form-control" id="dataLoadButton" value="Load" />
+        </td>
+    </tr>
+    <tr>
+        <td colspan="2">
+            <textarea id="statusTextarea" rows="10" class="status-box form-control"></textarea>
+        </td>
+    </tr>
+</table>
 <script>
     $(document).ready(function() {
+        LoadDatasheetOptions();
+        $("#datasheetSelect").on("change", function() {
+            $("#datasheetUrlHidden").val($(this).val());
+        });
         $("#dataLoadButton").on("click", loadData);
     });
 </script>

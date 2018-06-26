@@ -2,6 +2,7 @@
 
 // Global variables
 var supplierSegmentListPath = "";
+var datapointCollection;
 
 // Shared utility functions 
 
@@ -39,7 +40,32 @@ function GetConfigurationValue(key) {
 
 // End shared utility functions
 
-// Data load functions 
+// Datasheet initialization functions
+
+function LoadDatasheetOptions() {
+    datasheetUrl = _spPageContextInfo.webAbsoluteUrl + "/_api/web/lists/getbytitle('Documents')/items?$select=Modified&$expand=File&$top=50&$orderby=Modified desc";
+    $.ajax({
+        url: datasheetUrl,
+        method: "GET",
+        headers: {
+            "accept": "application/json;odata=verbose"
+        },
+        success: function(data) {
+            $.each(data.d.results, function(i, ds) {
+                if (ds.File.Name.endsWith(".csv")) {
+                    $("#datasheetSelect").append("<option value='" + ds.File.ServerRelativeUrl  + "'>" + ds.File.Name + "</option>");
+                }
+            });
+        },
+        error: function(err) {
+            console.log(JSON.stringify(err));
+        }
+    });
+}
+
+// End datasheet initialization functions
+
+// Data load functions
 
 function GetSupplierData() {
     var supListUrl = GetConfigurationValue("SupplierSegmentsListSitePath") + "/_api/web/lists/getbytitle('IS Supplier Segments')/items?$select=Title,SupplierID";
@@ -59,7 +85,7 @@ function GetSupplierData() {
 }
 
 function GetSchema() {
-    var schemaUrl = "/sites/astellasvsm/supscore/_api/web/lists/getbytitle('Schema')/items?$select=Title,Metric,Format&$top=100";
+    var schemaUrl = "/sites/astellasvsm/supscore/_api/web/lists/getbytitle('Schema')/items?$select=Title,Metric,Group,Period,PeriodType,Format&$top=100";
     return $.ajax({
         url: schemaUrl,
         method: "GET",
@@ -72,34 +98,128 @@ function GetSchema() {
     });
 }
 
-var loadData = function LoadData() {
-    var filePath = "/sites/astellasvsm/supscore/shared%20documents/Astellas Supplier Segmentation_Data Worksheet_FY17.csv";
+function FormatValue(value, format) {
+    var formattedValue;
+
+    switch(format) {
+        case "${}":
+            formattedValue = parseFloat(value.split(",").join("")).toFixed(2);
+            break;
+        case "${}M":
+            formattedValue = parseFloat(value.split(",").join("")).toFixed(2);
+            break;
+        case "{0.}":
+        case "{0.}%":
+            formattedValue = parseInt(value).toString();
+            break;
+        case "{0.0}":
+        case "{0.0}%":
+            formattedValue = parseFloat(value).toFixed(1);
+            break;
+        case "{0.00}":
+        case "{0.00}%":
+            formattedValue = parseFloat(value).toFixed(2);
+            break;
+        case "{0.000}":
+        case "{0.000}%":
+            formattedValue = parseFloat(value).toFixed(3);
+            break;
+        default: 
+            formattedValue = value;
+            break;
+    }
+
+    return formattedValue;
+}
+
+function SaveDataPoint(dp) {
+    // Construct data point object
+    var dataPoint = {
+        '__metadata': {
+            'type': 'SP.Data.DatapointsListItem'
+        },
+        'Title': dp.metric,
+        'Period': dp.period,
+        'PeriodType': dp.periodType,
+        'Group': dp.group,
+        'Supplier': dp.supplierId,
+        'Valid': (new Date()).toISOString(),
+        'Value': dp.value,
+        'DataFormat': dp.format,
+        'DisplayFormat': dp.format == "${}" ? "${}M" : dp.format,
+        'FY': dp.year
+    }
+    // Check if data point exists by Supplier, Metric, PeriodType, Period and Group
+    console.log("Checking " + datapointCollection.length + " data points...");
+    if (datapointCollection) {
+        var matches = $.grep(datapointCollection, function(p, i) {
+            return (p.Title === dp.metric && p.Supplier === dp.supplierId && p.PeriodType === dp.periodType && p.Period === dp.period && p.Group === dp.group);
+        });
+        if (matches.length > 0) {
+            console.log("Match found.");
+            // Match found - update
+            UpdateDataPoint(matches[0].__metadata.uri, dataPoint);
+        }
+        else {
+            console.log("No match.");
+            // No match found - add data point
+            AddDataPoint(dataPoint);
+        }
+    }
+    else {
+        console.log("Failed to read existing data point information. Please try again.");
+    }
+}
+
+function AddDataPoint(dp) {
+    var dataPointUrl = _spPageContextInfo.webAbsoluteUrl + "/_api/web/lists/getbytitle('Datapoints')/items";
     
     $.ajax({
-        type: "GET",
-        url: filePath,
-        dataType: "text",
+        url: dataPointUrl,
+        method: "POST",
+        data: JSON.stringify(dp),
+        headers: {
+            "accept": "application/json;odata=verbose",
+            "content-type": "application/json;odata=verbose",
+            "X-RequestDigest": $("#__REQUESTDIGEST").val()
+        },
         success: function(data) {
-            // Capture all records as objects
-            records = $.csv.toObjects(data);
-            
-            // Get Supplier data from master table
-            GetSupplierData().done(function(supplierData) {
-                GetSchema().done(function(schema) {
-                    $.each(records, function(i, record) {
-                        // Check if the supplier is in the supplier segmentation table
-                        var matches = $.grep(supplierData.d.results, function(s, i) { return s.Title == record["Supplier Name"]; });
-                        if (matches.length > 0) {
-                            console.log(matches.length + " match(es) found for " + record['Supplier Name'] + " - Supplier ID: " + matches[0].SupplierID);
-                        }
-                        else {
-                            console.log("No matches found for " + record['Supplier Name']);
-                        }
-                    });
-                });
-            }).fail(function(err) {
-                console.log(JSON.stringify(err));
-            });
+            console.log("Added: " + dp.FY + " " + dp.Supplier + " " + dp.Title + " " + dp.PeriodType + " "  + dp.Period + " " + dp.Group);
+        },
+        error: function(err) {
+            console.log("Failed to add: " + dp.FY + " " + dp.Supplier + " " + dp.Title + " " + dp.PeriodType + " " + dp.Period + " " + dp.Group + JSON.stringify(err));
+        }
+    });
+}
+
+function UpdateDataPoint(uri, dp) {
+    $.ajax({
+        url: uri,
+        method: "POST",
+        data: JSON.stringify(dp),
+        headers: {
+            "accept": "application/json;odata=verbose",
+            "X-RequestDigest": jQuery("#__REQUESTDIGEST").val(),
+            "content-type": "application/json;odata=verbose",
+            "X-HTTP-Method": "MERGE",
+            "If-Match": "*"
+        },
+        success: function(data) {
+            console.log("Updated: " + dp.FY + " " + dp.Supplier + " " + dp.Title + " " + dp.PeriodType + " "  + dp.Period + " " + dp.Group);
+        },
+        error: function(err) {
+            console.log("Failed to update: " + dp.FY + " " + dp.Supplier + " " + dp.Title + " " + dp.PeriodType + " " + dp.Period + " " + dp.Group + JSON.stringify(err));
+        }
+    });
+}
+
+function GetColumnMap() {
+    var columnMapUrl = _spPageContextInfo.webAbsoluteUrl + "/_api/web/lists/getbytitle('Column Map')/items";
+    return $.ajax({
+        url: columnMapUrl,
+        method: "GET",
+        headers: {
+            "accept": "application/json;odata=verbose"
         },
         error: function(err) {
             console.log(JSON.stringify(err));
@@ -107,13 +227,140 @@ var loadData = function LoadData() {
     });
 }
 
+var loadData = function LoadData() {
+    var columnMap = [];
+    var filePath = $("#datasheetUrlHidden").val();
+    var currentYear = filePath.substr(filePath.lastIndexOf("_") + 1, 4);
+    if (filePath) {
+        $.ajax({
+            type: "GET",
+            url: filePath,
+            dataType: "text",
+            success: function(data) {
+                // Capture all records as objects
+                records = $.csv.toObjects(data);
+
+                console.log(records.length + " records found.");
+                
+                GetColumnMap().done(function(columnData) {
+                    $.each(columnData.d.results, function(i, cd){
+                        columnMap.push(
+                            {
+                                "title": cd.Title,
+                                "column": cd.Column
+                            }
+                        )
+                    });
+
+                    for (var propertyName in records[0]) {
+                        console.log("Finding column for field - " + propertyName);
+                        var column = $.grep(columnMap, function(m, i) { return m.title == propertyName });
+                        if (column.length > 0) {
+                            console.log("Column found - " + column[0].column);
+                        }
+                        else {
+                            console.log("Column NOT found.");
+                        }
+                    }
+                });
+                
+                // Get all existing data points for the datasheet year
+                // RetrieveAllDatapoints(currentYear).done(function(dpData) {
+                //     datapointCollection = dpData.d.results;
+                //     // Get Supplier data from master table
+                //     GetSupplierData().done(function(supplierData) {
+                //         GetSchema().done(function(schema) {
+                //             // 5 things are needed to add a datapoint
+                //             // The first is derived from the Supplier Segment table
+                //             var currentSupplierId;
+                //             // The rest are obtained from the schema map
+                //             var currentMetric;
+                //             var currentPeriodType;
+                //             var currentPeriod;
+                //             var currentGroup;
+                //             var currentFormat;
+                //             var currentValue;
+    
+                //             $.each(records, function(i, record) {
+                //                 // Check if the supplier is in the supplier segmentation table
+                //                 var matches = $.grep(supplierData.d.results, function(s, i) { return s.Title == record["Supplier Name"]; });
+                //                 if (matches.length > 0) {
+                //                     // Supplier match found
+                //                     // TODO: Remove condition after testing for one supplier
+                //                     if (record["Supplier Name"] == "IBM") {
+                //                         // Set current supplier ID
+                //                         currentSupplierId = matches[0].SupplierID;
+                //                         // Enumerate properties of record
+                //                         for (var prop in record) {
+                //                             // Find the corresponding schema entry
+                //                             var schemaEntry = $.grep(schema.d.results, function(s, i) { return s.Title == prop });
+                //                             if (schemaEntry.length > 0) {
+                //                                 // Schema entry found - set required values
+                //                                 currentMetric = schemaEntry[0].Metric;
+                //                                 currentGroup = schemaEntry[0].Group;
+                //                                 currentPeriodType = schemaEntry[0].PeriodType;
+                //                                 currentPeriod = schemaEntry[0].Period;
+                //                                 currentFormat = schemaEntry[0].Format;
+                //                                 currentValue = FormatValue(record[prop], currentFormat);
+    
+                //                                 // Add or update the data point in the data point list
+                //                                 SaveDataPoint({
+                //                                     supplierId: currentSupplierId, 
+                //                                     metric: currentMetric, 
+                //                                     group: currentGroup,
+                //                                     periodType: currentPeriodType,
+                //                                     period: currentPeriod,
+                //                                     value: currentValue,
+                //                                     format: currentFormat,
+                //                                     year: currentYear
+                //                                 });
+                //                             }
+                //                         }
+                //                     }
+                //                 }
+                //                 else {
+                //                     // Supplier match not found - do nothing
+                //                 }
+                //             });
+                //         });
+                //     }).fail(function(err) {
+                //         console.log(JSON.stringify(err));
+                //     });
+                // });
+            },
+            error: function(err) {
+                console.log(JSON.stringify(err));
+            }
+        });
+    }
+    else {
+        alert("Please select a datasheet to load.");
+    }
+}
+
 // End data load functions
 
 // Shared data retrieval functions
 
-function GetAllDataPointsForSupplier(supplier) {
+function RetrieveAllDatapoints(currentYear) {
+    reqUrl = _spPageContextInfo.webAbsoluteUrl + "/_api/web/lists/getbytitle('Datapoints')/items?$select=Title,PeriodType,Period,Valid,Value,DataFormat,DisplayFormat,Supplier,Group,FY&$top=50000&$filter=FY eq '" + currentYear + "'";
+    return $.ajax({
+        url: reqUrl,
+        method: "GET",
+        headers: {
+            "accept": "application/json;odata=verbose"
+        },
+        success: function(data) {
+        },
+        error: function(err) {
+            console.log(JSON.stringify(err));
+        }
+    });
+}
+
+function GetAllDataPointsForSupplier(supplier, year) {
     var dataPoints;
-    reqUrl = _spPageContextInfo.webAbsoluteUrl + "/_api/web/lists/getbytitle('Datapoints')/items?$select=Title,Period,Valid,Value,DataFormat,DisplayFormat,Supplier,Group&$filter=Supplier eq '" + supplier + "'&$top=1000&$orderby=Valid desc";
+    reqUrl = _spPageContextInfo.webAbsoluteUrl + "/_api/web/lists/getbytitle('Datapoints')/items?$select=Title,PeriodType,Period,Valid,Value,DataFormat,DisplayFormat,Supplier,Group,FY&$filter=Supplier eq '" + supplier + "' and FY eq '" + year + "'&$top=1000&$orderby=Valid desc";
     $.ajax({
         url: reqUrl,
         method: "GET",
@@ -131,8 +378,8 @@ function GetAllDataPointsForSupplier(supplier) {
     return dataPoints;
 }
 
-function GetDataPoints(supplier, metric, period) {
-    reqUrl = _spPageContextInfo.webAbsoluteUrl + "/_api/web/lists/getbytitle('Datapoints')/items?$select=Title,Period,Valid,Value,DataFormat,DisplayFormat,Supplier&$filter=Supplier eq '" + supplier + "' and Title eq '" + metric + "' and Period eq '" + period + "'";
+function GetDataPoints(supplier, metric, periodType, period) {
+    reqUrl = _spPageContextInfo.webAbsoluteUrl + "/_api/web/lists/getbytitle('Datapoints')/items?$select=Title,PeriodType,Period,Valid,Value,DataFormat,DisplayFormat,Supplier,FY&$filter=Supplier eq '" + supplier + "' and Title eq '" + metric + "' and PeriodType eq " + periodType + "' and Period eq '" + period + "'";
     $.ajax({
         url: reqUrl,
         method: "GET",
@@ -157,24 +404,9 @@ function GetValueForYear(dataPoints, year) {
     });
 }
 
-function GetFormattedString(value, format) {
-    var prefix = format.substring(0, format.indexOf("{"));
-    var suffix = format.substring(format.indexOf("}") + 1);
-    var formatString = format.substring(format.indexOf("{") + 1, format.indexOf("}"));
-
-    // If the format needs to be a number
-    if (formatString.indexOf("0.") > -1) {
-        // Find number of decimal places
-        var decimals = formatString.substring(formatString.indexOf(".") + 1).length;
-        return prefix + parseFloat(value).toFixed(decimals) + suffix;
-    }
-
-    return prefix + value + suffix;
-}
-
-function GetMetricDataPoints(dataPoints, metric, period) {
+function GetMetricDataPoints(dataPoints, metric, periodType) {
     var points = $.grep(dataPoints, function(dp, i) {
-        return (dp.Title == metric && dp.Period == period);
+        return (dp.Title == metric && dp.PeriodType == periodType);
     });
     return points;
 }
@@ -183,17 +415,25 @@ function GetLatestMetricValue(dataPoints, metric, period) {
     var points = $.grep(dataPoints, function(dp, i) {
         return (dp.Title == metric && dp.Period == period && dp.Group == "ALL");
     });
-    // points.sort(function(a, b) { return (new Date(a.Valid)) > (new Date(b.Valid))});
-    return GetFormattedString(points[0].Value, points[0].DisplayFormat);
-    //return points[0].Value;
+    if (points.length > 0) {
+        return GetFormattedString(points[0].Value, points[0].DisplayFormat);
+    }
+    else {
+        return "";
+    }
 }
 
 function GetLatestMetricDate(dataPoints, metric, period) {
     var points = $.grep(dataPoints, function(dp, i) {
         return (dp.Title == metric && dp.Period == period);
     });
-    points.sort(function(a, b) { return (new Date(a.Valid)) > (new Date(b.Valid))});
-    return points[0].Valid;
+    if (points.length > 0) {
+        points.sort(function(a, b) { return (new Date(a.Valid)) > (new Date(b.Valid))});
+        return points[0].Valid;
+    }
+    else {
+        return null;
+    }
 }
 
 function GetMetricPointsForSpecificPeriod(dataPoints, metric, period, periodValue) {
@@ -245,6 +485,34 @@ function ComparePeriod(valid, period, periodValue) {
 }
 
 // End shared data retrieval functions
+
+// Shared data formatting functions
+
+function GetFormattedString(value, format) {
+    var prefix = format.substring(0, format.indexOf("{"));
+    var suffix = format.substring(format.indexOf("}") + 1);
+    var formatString = format.substring(format.indexOf("{") + 1, format.indexOf("}"));
+
+    // If the format needs to be a number
+    if (formatString.indexOf("0.") > -1) {
+        // Find number of decimal places
+        var decimals = formatString.substring(formatString.indexOf(".") + 1).length;
+        return prefix + parseFloat(value).toFixed(decimals) + suffix;
+    }
+
+    // If the format is currency in millions of dollars
+    if (format == "${}M") {
+        value = (value / 1000000).toFixed(2);
+    }
+
+    return prefix + value + suffix;
+}
+
+function GetRoundValue(value, decimals) {
+    return Number(Math.round(value + 'e'+ decimals) + 'e-' + decimals);
+}
+
+// End shared data formatting functions
 
 
 // Vendor List table functions
@@ -365,12 +633,12 @@ function LoadSupplierData(supplierId) {
     });
 
     // Get all data for the supplier
-    var allDataPoints = GetAllDataPointsForSupplier(supplierId);
+    var allDataPoints = GetAllDataPointsForSupplier(supplierId, '2016'); // TODO: Get year from configuration
     $(".reporting-period").text("Reporting Period: " + moment(GetLatestMetricDate(allDataPoints, "Health", "Year")).format("MMM-YYYY"));
     $(".vendor-health").text("Overall Supplier Health: " + GetLatestMetricValue(allDataPoints, "Health", "Year"));
 
     // Populate year spend
-    $(".year-spend-number").text(GetLatestMetricValue(allDataPoints, "Spend", "Year"));
+    $(".year-spend-number").text((allDataPoints, "Spend", "Year"));
 
     // Draw the IS spend percentage pie chart
     var spendPctValue = GetLatestMetricValue(allDataPoints, "ISSpendPct", "Year");
@@ -396,32 +664,55 @@ function LoadSupplierData(supplierId) {
     // Draw the Quarter spend bar chart
     var qtSpendPoints = GetMetricDataPoints(allDataPoints, "Spend", "Quarter");
     var qtSpendDataPoints = [];
-    for (i = 3; i >= 0; i--) {
-        if (qtSpendPoints[i]) {
-            qtSpendDataPoints.push(qtSpendPoints[i].Value);
-        }
-    }
+    var qtSpendLabels = [];
+    $.each(qtSpendPoints, function(i, pt) {
+        qtSpendDataPoints.push(GetRoundValue(pt.Value / 1000000, 2));
+        qtSpendLabels.push(pt.Period);
+    });
     var qtSpendData = {
         datasets: [{
+            label: "Quarterly Spend",
             data: qtSpendDataPoints,
+            "fill": false,
             backgroundColor: [
+                'rgba(101, 141, 27, 0.2)',
+                'rgba(0, 76, 151, 0.2)',
+                'rgba(163, 22, 55, 0.2)',
+                'rgba(255, 192, 0, 0.2)'
+            ],
+            borderColor: [
                 'rgba(101, 141, 27, 1)',
                 'rgba(0, 76, 151, 1)',
                 'rgba(163, 22, 55, 1)',
                 'rgba(255, 192, 0, 1)'
-            ]
+            ],
+            borderWidth: 1
         }],
-        labels: [
-            'Q1 2016',
-            'Q2 2016',
-            'Q3 2016',
-            'Q4 2016'
-        ]
+        labels: qtSpendLabels
     };
     var qtSpendBarCtx = $("#qtSpendBar");
     var qtSpendBar = new Chart(qtSpendBarCtx, {
         type: 'bar',
-        data: qtSpendData
+        data: qtSpendData,
+        options: {
+            legend: {
+                display: false
+            },
+            scales: {
+                xAxes: [{
+                    time: {
+                        unit: 'quarter'
+                    }
+                }],
+                yAxes: [
+                    {
+                        ticks: {
+                            "beginAtZero": true
+                        }
+                    }
+                ]
+            }
+        }
     });
 
     // Draw the Supplier revenue Pie
@@ -441,9 +732,14 @@ function LoadSupplierData(supplierId) {
                 }
             ],
             labels: [
-                'Revenue contributed by Astellas IS',
+                'Astellas IS',
                 'Other'
             ]
+        },
+        options: {
+            legend: {
+                display: false
+            }
         }
     });
 }
