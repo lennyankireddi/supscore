@@ -1,0 +1,260 @@
+<div class="container">
+<table border="0">
+    <tr>
+        <td colspan="2">
+            Select a datasheet to load data from and click the "Load" button
+        </td>
+    </tr>
+    <tr>
+        <td>
+            <select id="datasheetSelect" class="form-control">
+                <option value=""></option>
+            </select>
+        </td>
+        <td>
+            <input type="hidden" id="datasheetUrlHidden" value="" />
+            <input type="button" class="data-load-button btn btn-default form-control" id="dataLoadButton" value="Load" />
+        </td>
+    </tr>
+    <tr>
+        <td colspan="2">
+            <div class="field-label">STATUS</div>
+            <div id="statusArea" class="status-bar">&nbsp;</div>
+            <div class="field-label">
+                <span class="label-buffer">LOG</span>
+                <input type="checkbox" id="errorsOnly">&nbsp;Show errors only
+            </div>
+            <ul id="logArea" class="log-list"></ul>
+        </td>
+    </tr>
+</table>
+</div>
+<script>
+
+    function GetColumnMap() {
+        var columnMapUrl = _spPageContextInfo.webAbsoluteUrl + "/_api/web/lists/getbytitle('Column Map')/items";
+        return $.ajax({
+            url: columnMapUrl,
+            method: "GET",
+            headers: {
+                "accept": "application/json;odata=verbose"
+            },
+            error: function(err) {
+                console.log(JSON.stringify(err));
+            }
+        });
+    }
+
+    function ProcessValue(value, datatype) {
+        var retVal;
+        if (datatype == "Text") {
+            retVal = value;
+        }
+        if (datatype == "Number") {
+            retVal = value.replace(",", "").replace(",", "").replace(",", "").replace(",", "").replace("%", "");
+            retVal = parseFloat(retVal);
+        }
+        if (datatype == "Boolean") {
+            switch(value.toLowerCase()) {
+                case "yes":
+                case "y":
+                    retVal = true;
+                    break;
+                case "no":
+                case "n":
+                    retVal = false;
+                    break;
+                default: retVal = false;
+                    break;
+            }
+        }
+        return retVal;
+    }
+
+    function AddSupplierData(record, columnMap, year) {
+        // Initialize a data payload object
+        var data = {
+            '__metadata': {
+                'type': 'SP.Data.IS_x0020_Supplier_x0020_DataListItem'
+            },
+            'SupplierID': GenerateId(),
+            'Year': year
+        }
+        // Run through the record properties and try to find column to insert data into
+        for (var propertyName in record) {
+            var columns = $.grep(columnMap, function(m, i) { return m.title == propertyName });
+            if (columns.length > 0) {
+                data[columns[0].column] = ProcessValue(record[propertyName], columns[0].datatype); // Assign record field value
+            }
+        }
+
+        // Payload is ready - write it to the list
+        var supDataUrl = _spPageContextInfo.webAbsoluteUrl + "/_api/web/lists/getbytitle('IS Supplier Data')/items";
+        $.ajax({
+            url: supDataUrl,
+            method: "POST",
+            data: JSON.stringify(data),
+            headers: {
+                "accept": "application/json;odata=verbose",
+                "X-RequestDigest": $("#__REQUESTDIGEST").val(),
+                "content-type": "application/json;odata=verbose"
+            },
+            success: function(data) {
+                $("#logArea").append("<li class='success indent'>Successfully added new record for <strong>" + record['Supplier Name'] + "</strong></li>");
+            },
+            error: function(err) {
+                $("#logArea").html("<li class='error indent'>Add failed - " + JSON.stringify(err) + "</li>");
+            }
+        });
+    }
+
+    function UpdateSupplierData(currData, record, columnMap) {
+        var updateRequired = false;
+        var data = {
+            '__metadata': {
+                'type': 'SP.Data.IS_x0020_Supplier_x0020_DataListItem'
+            }
+        }
+        // Run through the record properties and try to find column to insert data into
+        for (var propertyName in record) {
+            var columns = $.grep(columnMap, function(m, i) { return m.title == propertyName });
+            if (columns.length > 0) {
+                // Column is found - check if it contains the same value as being added
+                var processedValue = ProcessValue(record[propertyName], columns[0].datatype);
+                var currentValue = currData[columns[0].column];
+                if (processedValue) {
+                    if (currentValue != processedValue) {
+                        data[columns[0].column] = processedValue; // Assign record field value
+                        updateRequired = true; // Set the flag to update
+                    }
+                }
+                else {
+                    if (currentValue) {
+                        data[columns[0].column] = processedValue; // Assign record field value
+                        updateRequired = true; // Set the flag to update
+                    }
+                }
+            }
+        }
+
+        if (updateRequired) {
+            $("#logArea").append("<li class='info indent'>Update required for <strong>" + record['Supplier Name'] + "</strong>. Merging changes...</li>");
+            // Payload is ready - write it to the list
+            var supDataUrl = currData.__metadata.uri;
+            $.ajax({
+                url: supDataUrl,
+                method: "POST",
+                data: JSON.stringify(data),
+                headers: {
+                    "accept": "application/json;odata=verbose",
+                    "X-RequestDigest": $("#__REQUESTDIGEST").val(),
+                    "content-type": "application/json;odata=verbose",
+                    "X-HTTP-Method": "MERGE",
+                    "If-Match": "*"
+                },
+                success: function(data) {
+                    $("#logArea").append("<li class='success indent'>Successfully updated record for <strong>" + record["Supplier Name"] + "</strong></li>");
+                },
+                error: function(err) {
+                    $("#logArea").append("<li class='error indent'>Update failed - " + JSON.stringify(err) + "</li>");
+                }
+            });
+        }
+        else {
+            $("#logArea").append("<li class='warning indent'>No changes were found to <strong>" + record['Supplier Name'] + "</strong> field values. Skipping record.</li>");
+        }
+    }
+
+    var loadData = function LoadData(log) {
+        var columnMap = [];
+        $("#logArea").empty();
+        // Get file location and start reading contents
+        var filePath = $("#datasheetUrlHidden").val();
+        var currentYear = filePath.substr(filePath.lastIndexOf("_") + 1, 4);
+        if (filePath) {
+            $.ajax({
+                type: "GET",
+                url: filePath,
+                dataType: "text",
+                success: function(data) {
+                    // Capture all records as objects
+                    var records = $.csv.toObjects(data);
+                    $("#statusArea").html("Records retrieved. Commencing load. Processing " + records.length + " record(s).");
+                    $("#logArea").append("<li class='info'>Processing " + records.length + " record(s)...</li>");
+                    // Get column map to find columns corresponding to data fields
+                    GetColumnMap().done(function(columnData) {
+                        $.each(columnData.d.results, function(i, cd){
+                            columnMap.push(
+                                {
+                                    "title": cd.Title,
+                                    "column": cd.Column,
+                                    "datatype": cd.DataType
+                                }
+                            )
+                        });
+
+                        // Iterate through incoming data records
+                        $.each(records, function(i, record) {
+                            // Check if a record for the supplier in the current year exists
+                            // $("#statusArea").html("Currently processing record " + (i + 1).toString() + " of " + records.length + " - <strong>" + record['Supplier Name'] + "</strong>");
+                            $("#logArea").append("<li class='info'>Record " + (i + 1).toString() + " - <strong>" + record['Supplier Name'] + "</strong></li>");
+                            supDataUrl = _spPageContextInfo.webAbsoluteUrl + "/_api/web/lists/getbytitle('IS Supplier Data')/items?$top=10000&$filter=Title eq '" + encodeURIComponent(record['Supplier Name']) + "' and Year eq '" + currentYear + "'";
+                            $.ajax({
+                                url: supDataUrl,
+                                method: "GET",
+                                headers: {
+                                    "accept": "application/json;odata=verbose"
+                                },
+                                success: function(data) {
+                                    // If supplier record for current year exists, update it
+                                    if (data.d.results.length > 0) {
+                                        $("#logArea").append("<li class='info indent'><strong>" + record['Supplier Name'] + "</strong> record found. Updating...</li>");
+                                        UpdateSupplierData(data.d.results[0], record, columnMap);
+                                    }
+                                    // If no record exists, add it
+                                    else {
+                                        $("#logArea").append("<li class='info indent'>No existing record for <strong>" + record['Supplier Name'] + "</strong>. Adding...</li>");
+                                        AddSupplierData(record, columnMap, currentYear);
+                                    }
+                                },
+                                error: function(err) {
+                                    $("#logArea").html("<li class='error'>Failed to check existing record for - " + record['Supplier Name'] + JSON.stringify(err) + "</li>");
+                                    console.log("Failed to check existing record for - " + record['Supplier Name'] + JSON.stringify(err));
+                                }
+                            });
+                        });
+
+                        // $("#statusArea").html("Done processing all records")
+                    }).fail(function(err) {
+                        $("#logArea").html("<li class='error'>Column map could not be read - " + JSON.stringify(err) + "</li>");
+                        console.log("Column map could not be read - " + JSON.stringify(err));
+                    });
+                },
+                error: function(err) {
+                    $("#logArea").html("<li class='error'>Failed to read file content - " + JSON.stringify(err) + "</li>");
+                    console.log("Failed to read file content - " + JSON.stringify(err));
+                }
+            });
+        }
+        else {
+            alert("Please select a datasheet to load.");
+        }
+    }
+
+    $(document).ready(function() {
+        LoadDatasheetOptions();
+        $("#datasheetSelect").on("change", function() {
+            $("#datasheetUrlHidden").val($(this).val());
+        });
+        $("#dataLoadButton").on("click", loadData);
+        $("#errorsOnly").on("click", function() {
+            if ($(this).prop('checked') == true) {
+                $(".log-list li").hide();
+                $(".log-list li.error").show();
+            }
+            else {
+                $(".log-list li").show();
+            }
+        });
+    });
+</script>

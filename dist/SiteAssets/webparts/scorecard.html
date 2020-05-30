@@ -1,0 +1,1114 @@
+<div class="container-fluid scorecard-container">
+    <div class="row vendor-banner">
+        <div id="vendorTitle" class="col-md-4 vendor-title"></div>
+        <div class="col-md-3"></div>
+        <div class="col-md-3 vendor-health">
+            <span class="attr-label health-label">Overall Supplier Health</span>
+            <span id="supplierHealth" class="supplier-health"></span>
+        </div>
+        <div class="col-md-2 vendor-attributes">
+            <div><span class="attr-label">Segment:&nbsp;</span><span id="vendorSegment" class="attr-value"></div>
+            <div><span class="attr-label">Category:&nbsp;</span><span id="vendorCategory" class="attr-value"></div>
+            <div><span class="attr-label">Reporting Period:&nbsp;</span><span class="attr-value" id="reportingPeriod"></span></div>
+        </div>
+    </div>
+    <div class="row viz-container">
+        <div class="col-md-5 left-viz-container">
+            <div class="viz-group">
+                <div class="viz-group-header" style="background-color: #004C97">FINANCIAL</div>
+                <div class="container viz-field">
+                    <div class="row">
+                        <div class="viz-box year-spend-box col-md-6 col-sm-12">
+                            <div class="viz-title year-spend-title">PREVIOUS 12 MONTHS</div>
+                            <div id="totalSpendValue" class="year-spend-value"></div>
+                        </div>
+                        <div id="spendPieContainer" class="viz-box spend-pct-box col-md-6 col-sm-12">
+                            <div class="viz-title">PERCENT OF TOTAL IS SPEND</div>
+                            <div id="spendPctPie"></div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div id="quarterSpendContainer" class="viz-box quarter-spend-box col-md-6 col-sm-12">
+                            <div class="viz-title">BY QUARTER (MILLIONS)</div>
+                            <div id="qtSpendBar"></div>
+                        </div>
+                        <div id="supRevContainer" class="viz-box spend-pct-box col-md-6 col-sm-12">
+                            <div class="viz-title">SUPPLIER REVENUE (MILLIONS)</div>
+                            <div id="supRevValue" class="supp-rev-number"></div>
+                            <div id="supRevPie" class="supp-rev-chart"></div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div id="groupSpendContainer" class="viz-box group-spend-box col-md-12">
+                            <div class="viz-title">SPEND BREAKDOWN BY IS GROUP (MILLIONS)</div>
+                            <div id="grpSpendBar"></div>
+                            <div class="neg-spend-box">
+                                <span class="neg-spend-msg">Negative spend values set to zero - net negative spend: </span>
+                                <span class="neg-spend-num"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-7 right-viz-container">
+            <div class="viz-group">
+                <div class="viz-group-header" style="background-color: #A31637">PERFORMANCE</div>
+                <div class="viz-field container">
+                    <div class="row">
+                        <div class="viz-box col-md-4">
+                            <div class="viz-title">SLAs</div>
+                            <div id="slaLine"></div>
+                            <div class="sla-box cpi-box">
+                                <div class="sla-box-title">CPIs</div>
+                                <div class="sla-box-metric">12 month average</div>
+                                <div class="sla-box-measure" id="cpiMeasure">0%</div>
+                            </div>
+                            <div class="sla-box kpi-box">
+                                <div class="sla-box-title">KPIs & GPIs</div>
+                                <div class="sla-box-metric">12 month average</div>
+                                <div class="sla-box-measure" id="kpiMeasure">0%</div>
+                            </div>
+                        </div>
+                        <div class="viz-box col-md-4">
+                            <div class="viz-title">CUSTOMER SATISFACTION</div>
+                            <div id="csatChart"></div>
+                            <div id="emojiGroup"></div>
+                        </div>
+                        <div class="viz-box col-md-4">
+                            <div class="viz-title">DELIVERABLES & OBLIGATIONS</div>
+                            <div id="onTimePie"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="viz-group">
+                <div class="viz-group-header" style="background-color: #658D1B">COMMENTS</div>
+                <div class="viz-field">
+                    
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    var supplierData;
+    var metrics;
+
+    function GetCSATColor(num) {
+        switch(num) {
+            case 0:
+            case 1:
+            case 2:
+            case 3:
+            case 4: return "#FAC1C2";
+            case 5:
+            case 6: return "#F6FEB5";
+            case 7:
+            case 8:
+            case 9: return "#BAF8B6";
+        }
+    }
+
+    function GetOnTimeColor(num) {
+        switch(num) {
+            case 0: return "#9BB56B";
+            case 1: return "#A31637";
+            default: return "#B7B8B9";
+        }
+    }
+
+    function GetPeriod(mth, year) {
+        switch(mth.toLowerCase()) {
+            case 'apr': return moment("4/1/" + (parseInt(year) - 1).toString()).toDate();
+            case 'may': return moment("5/1/" + (parseInt(year) - 1).toString()).toDate();
+            case 'jun': return moment("6/1/" + (parseInt(year) - 1).toString()).toDate();
+            case 'jul': return moment("7/1/" + (parseInt(year) - 1).toString()).toDate();
+            case 'aug': return moment("8/1/" + (parseInt(year) - 1).toString()).toDate();
+            case 'sep': return moment("9/1/" + (parseInt(year) - 1).toString()).toDate();
+            case 'oct': return moment("10/1/" + (parseInt(year) - 1).toString()).toDate();
+            case 'nov': return moment("11/1/" + (parseInt(year) - 1).toString()).toDate();
+            case 'dec': return moment("12/1/" + (parseInt(year) - 1).toString()).toDate();
+            case 'jan': return moment("1/1/" + (parseInt(year)).toString()).toDate();
+            case 'feb': return moment("2/1/" + (parseInt(year)).toString()).toDate();
+            case 'mar': return moment("3/1/" + (parseInt(year)).toString()).toDate();
+        }
+    }
+
+    function GetMetricColumns(metricName) {
+        var columnMapUrl = _spPageContextInfo.webAbsoluteUrl + "/_api/web/lists/getbytitle('Column Map')/items?$top=100&$select=Title,Column,Metric&$filter=Metric eq '" + metricName + "'";
+        return $.ajax({
+            url: columnMapUrl,
+            method: "GET",
+            headers: {
+                "accept": "application/json;odata=verbose"
+            }
+        });
+    }
+
+    function RenderPctISTotalSpendChart() {
+        var pctValue = GetRoundValue(supplierData.PctTotalISSpend12Months * 100, 2);
+        var dataset = [pctValue, 100 - pctValue];
+        var rect = document.getElementById("spendPieContainer").getBoundingClientRect();
+        var w = rect.width - 30;
+        var h = w;
+
+        var innerRadius = 0;
+        var gutter = 60;
+        var outerRadius = Math.round(w / 4);
+        var arc = d3.arc()
+                    .innerRadius(innerRadius)
+                    .outerRadius(outerRadius);
+
+        var pie = d3.pie();
+
+        var svg1 = d3.select("#spendPctPie")
+                    .append("svg")
+                    .attr("width", w)
+                    .attr("height", w - gutter);
+
+        var arcs = svg1.selectAll("g.arc")
+                    .data(pie(dataset))
+                    .enter()
+                    .append("g")
+                    .attr("class", "arc")
+                    .attr("transform", function(d, i) {
+                        return "translate(" + (outerRadius + gutter) + ", " + (outerRadius + gutter/2) + ")"
+                    });
+        arcs.append("path")
+            .attr("fill", function(d, i) {
+                return GetSpendPieColor(i);
+            })
+            .attr("d", arc);
+
+        
+        
+        if (pctValue < 0.001) {
+            svg1.append("text")
+                .attr("x", w/2)
+                .attr("y", 20)
+                .attr("class", "pct-spend-value")
+                .attr("text-anchor", "end")
+                .text("LESS THAN 0.001%");
+        }
+        else {
+            // svg1.append("text")
+            //     .attr("x", 10)
+            //     .attr("y", 15)
+            //     .attr("class", "sup-rev-caption")
+            //     .attr("text-anchor", "start")
+            //     .text("PERCENT OF IS TOTAL SPEND");
+
+            svg1.append("text")
+                .attr("x", w/2)
+                .attr("y", 20)
+                .attr("class", "pct-spend-value")
+                .attr("text-anchor", "end")
+                .text(dataset[0] + "%");
+        }
+    }
+
+    function RenderQuarterlySpendChart(year) {
+        var qtCols = [supplierData.TotalSpendQ1, supplierData.TotalSpendQ2, supplierData.TotalSpendQ3, supplierData.TotalSpendQ4];
+        dataset = [];
+        $.each(qtCols, function(i, q) {
+            dataset.push(GetRoundValue(q / 1000000, 3));
+        });
+        var rect2 = document.getElementById("quarterSpendContainer").getBoundingClientRect();
+        w = rect2.width - 20;
+        h = 200;
+        var barWidth = 40;
+        var barSpan = w / dataset.length;
+
+        var yScale = d3.scaleLinear()
+                        .domain([0, d3.max(dataset)])
+                        .range([0, h - 60]);
+
+        var svg2 = d3.select("#qtSpendBar")
+                    .append("svg")
+                    .attr("width", w)
+                    .attr("height", h);
+
+        var qtBars = svg2.selectAll("rect")
+                    .data(dataset)
+                    .enter()
+                    .append("rect")
+                    .attr("fill", function(d, i) {
+                        return GetQuarterColor(i);
+                    })
+                    .attr("x", function(d, i) {
+                        return (barSpan - barWidth) / 2 + (i * barSpan);
+                    })
+                    .attr("y", function(d) {
+                        return h - 30 - yScale(d);
+                    })
+                    .attr("width", barWidth)
+                    .attr("height", function(d) {
+                        return yScale(d);
+                    });
+        
+        var xAxis = svg2.append("line")
+                        .attr("x1", 0)
+                        .attr("y1", h - 30)
+                        .attr("x2", w)
+                        .attr("y2", h - 30)
+                        .attr("style", "stroke: rgb(200, 200, 200); stroke-width: 2");
+
+        svg2.selectAll("text.qt-axis-label")
+                    .data(["Q1", "Q2", "Q3", "Q4"])
+                    .enter()
+                    .append("text")
+                    .attr("class", "qt-axis-label")
+                    .attr("x", function(d, i) {
+                        return (barSpan / 2) + (barSpan * i);
+                    })
+                    .attr("y", h - 10)
+                    .attr("text-anchor", "middle")
+                    .text(function(d) {
+                        return d + " " + year;
+                    });
+
+        svg2.selectAll("text.qt-label")
+                    .data(dataset)
+                    .enter()
+                    .append("text")
+                    .attr("class", "qt-label")
+                    .attr("x", function(d, i) {
+                        return (barSpan) / 2 + (i * barSpan);
+                    })
+                    .attr("y", function(d) {
+                        return h - 35 - yScale(d);
+                    })
+                    .attr("text-anchor", "middle")
+                    .attr("style", function(d, i) {
+                        return "fill: " + GetQuarterColor(i);
+                    })
+                    .text(function(d) {
+                        return "$" + d;
+                    });
+    }
+
+    function RenderSupplierRevenueChart() {
+        var dataset;
+        var supRevPct;
+        if (supplierData.TotalSupRev12Months == null) {
+            dataset = [0, 100];
+            supRevPct = 0;
+        }
+        else {
+            supRevPct = (supplierData.TotalSpend / supplierData.TotalSupRev12Months) * 100;
+            dataset = [supRevPct, 100 - supRevPct];
+        }
+        
+        var rect3 = document.getElementById("supRevContainer").getBoundingClientRect();
+        var gutter = 60
+        var w = rect3.width - 30;
+        var h = w - gutter;
+
+        var innerRadius = 0;
+        var outerRadius = Math.round(w / 2 - gutter);
+        var arc2 = d3.arc()
+                    .innerRadius(innerRadius)
+                    .outerRadius(outerRadius);
+
+        var pie2 = d3.pie();
+
+        var svg3 = d3.select("#supRevPie")
+                    .append("svg")
+                    .attr("width", w)
+                    .attr("height", h);
+
+        var arcs2 = svg3.selectAll("g.arc")
+                    .data(pie2(dataset))
+                    .enter()
+                    .append("g")
+                    .attr("class", "arc")
+                    .attr("transform", function(d, i) {
+                        return "translate(" + (outerRadius + gutter) + ", " + (outerRadius + gutter/2) + ")"
+                    });
+        arcs2.append("path")
+            .attr("fill", function(d, i) {
+                return GetSupRevColor(i);
+            })
+            .attr("d", arc2);
+
+        svg3.append("line")
+            .attr("x1", w/2)
+            .attr("y1", 5)
+            .attr("x2", w/2)
+            .attr("y2", 30)
+            .attr("style", "stroke: " + GetSupRevColor(0) + "; stroke-width: 1;");
+
+        svg3.append("line")
+            .attr("x1", w/2)
+            .attr("y1", 5)
+            .attr("x2", w - 10)
+            .attr("y2", 5)
+            .attr("style", "stroke: " + GetSupRevColor(0) + "; stroke-width: 1;");
+
+        if (supplierData.TotalSupRev12Months == null) {
+            svg3.append("text")
+                .attr("x", w - 10)
+                .attr("y", 15)
+                .attr("class", "sup-rev-caption")
+                .attr("text-anchor", "end")
+                .text("NO DATA AVAILABLE");
+        }
+        else {
+            svg3.append("text")
+                .attr("x", w - 10)
+                .attr("y", 15)
+                .attr("class", "sup-rev-caption")
+                .attr("text-anchor", "end")
+                .text("PERCENT OF TOTAL REVENUE");
+                
+            svg3.append("text")
+                .attr("x", w - 10)
+                .attr("y", 25)
+                .attr("class", "sup-rev-caption")
+                .attr("text-anchor", "end")
+                .text("CONTRIBUTED BY ASTELLAS IS");
+                
+            svg3.append("text")
+                .attr("x", w - 10)
+                .attr("y", 40)
+                .attr("class", "sup-rev-pct")
+                .attr("text-anchor", "end")
+                .text(supRevPct.toFixed(2) + "%");
+        }
+    }
+
+    function RenderGroupSpendChart() {
+        // Group Spend Bar Chart
+        var rect4 = document.getElementById("grpSpendBar").getBoundingClientRect();
+        var groupListWidth = 60;
+        var pctColumnWidth = 60;
+        var horizontalSeparation = 2;
+        var verticalSeparation = 2;
+        var topSpace = 30;
+        var netNegValue = 0;
+        var negValuesPresent = false;
+
+        dataset = [];
+        GetMetricColumns("GroupSpend")
+        .done(function(data) {
+            $.each(data.d.results, function(i, c) {
+                var val = GetRoundValue(supplierData[c.Column] / 1000000, 3);
+                if (val < 0) {
+                    negValuesPresent = true;
+                    netNegValue += val;
+                }
+                dataset.push({
+                    "group": c.Title.replace("Total Spend for ", "").replace(" USD", ""),
+                    "value": val < 0 ? 0 : val
+                });
+            });
+
+            if (negValuesPresent) {
+                $(".neg-spend-num").text("$" + netNegValue.toFixed(2) + "M");
+                $(".neg-spend-box").show();
+            }
+
+            dataset.sort(function(a, b) { return (a.value < b.value) ? 1: ((b.value < a.value) ? -1: 0); });
+
+            var w = rect4.width;
+            var barHeight = 15;
+            var barSpacing = 5;
+            var barMaxWidth = w - (groupListWidth + horizontalSeparation) - (pctColumnWidth + horizontalSeparation);
+            var barLabelOffset = 10;
+            var barLeft = groupListWidth + horizontalSeparation;
+            var barSpan = barHeight + 2 * barSpacing;
+            var h = dataset.length * barSpan + (dataset.length - 1) * verticalSeparation + topSpace;
+
+            var xScale = d3.scaleLinear()
+                            .domain([d3.min(dataset, function(d) { return d.value; }), d3.max(dataset, function(d) { return d.value; })])
+                            .range([0, 0.9 * barMaxWidth]);
+
+            var svg4 = d3.select("#grpSpendBar")
+                .append("svg")
+                .attr("width", w)
+                .attr("height", h);
+
+            // Draw group labels
+            var grpnms = svg4.append("g")
+                            .attr("transform", "translate(0, " + topSpace + ")");
+            grpnms.selectAll("text")
+                .data(dataset)
+                .enter()
+                .append("text")
+                .text(function(d) { return d.group; })
+                .attr("x", barLeft - 6)
+                .attr("y", function(d, i) {
+                    return i * (barSpan + horizontalSeparation) + barSpan / 2 + 4;
+                })
+                .attr("text-anchor", "end")
+                .attr("class", "grp-name-label");
+
+            // Draw background for bars
+            var bkgrp = svg4.append("g")
+                            .attr("transform", "translate(" + barLeft + ", " + topSpace + ")");
+            bkgrp.selectAll("rect")
+                .data(dataset)
+                .enter()
+                .append("rect")
+                .attr("class", "grp-bar-back")
+                .attr("y", function(d, i) {
+                    return i * (barSpan + verticalSeparation);
+                })
+                .attr("width", barMaxWidth)
+                .attr("height", barSpan);
+
+            // Draw bars
+            var bargrp = svg4.append("g")
+                            .attr("transform", "translate(" + barLeft + ", " + topSpace + ")");
+            bargrp.selectAll("rect")
+                .data(dataset)
+                .enter()
+                .append("rect")
+                .attr("class", function(d) {
+                    if (d < 0) {
+                        return "grp-bar-neg";
+                    }
+                    else {
+                        return "grp-bar-pos";
+                    }
+                })
+                .attr("width", function(d, i) {
+                    return xScale(parseFloat(d.value));
+                })
+                .attr("height", barHeight)
+                .attr("y", function (d, i) {
+                    return (barSpan - barHeight) / 2 + i * (barSpan + verticalSeparation);
+                });
+            
+            // Draw bar labels
+            bargrp.selectAll("text")
+                .data(dataset)
+                .enter()
+                .append("text")
+                .attr("x", function(d, i) {
+                    return xScale(d.value) + barLabelOffset;
+                })
+                .attr("y", function(d, i) {
+                    return (i * (barSpan + verticalSeparation)) + (barSpan / 2) + 4;
+                })
+                .text(function(d) {
+                    return "$" + d.value;
+                })
+                .attr("class", "grp-bar-label");
+
+            // Draw percent backgrounds
+            var pctbk = svg4.append("g")
+                            .attr("transform", "translate(" + parseFloat(barLeft + barMaxWidth + horizontalSeparation) + ", " + topSpace + ")");
+            pctbk.selectAll("rect")
+                .data(dataset)
+                .enter()
+                .append("rect")
+                .attr("class", "grp-bar-back")
+                .attr("width", pctColumnWidth)
+                .attr("height", barSpan)
+                .attr("y", function(d, i) {
+                    return i * (barSpan + verticalSeparation);
+                });
+
+            var pctNums = svg4.append("g")
+                            .attr("transform", "translate(" + parseFloat(barLeft + barMaxWidth + horizontalSeparation + 2) + ", " + topSpace + ")");
+            pctNums.selectAll("text")
+                .data(dataset)
+                .enter()
+                .append("text")
+                .attr("class", "grp-bar-label")
+                .text(function(d) { return GetRoundValue((parseFloat(d.value) * 100) / (supplierData.TotalSpend / 1000000), 1) + "%" })
+                .attr("x", pctColumnWidth / 2)
+                .attr("y", function(d, i) {
+                    return i * (barSpan + verticalSeparation) + barSpan / 2 + 5;
+                })
+                .attr("text-anchor", "middle");
+
+            var grphdr = svg4.append("g")
+                            .attr("transform", "translate(" + parseFloat(barLeft + barMaxWidth + horizontalSeparation) + ", 0)");
+            grphdr.append("text")
+                .text("% OF IS")
+                .attr("x", pctColumnWidth/2)
+                .attr("y", 8)
+                .attr("class", "hdr-label")
+                .attr("text-anchor", "middle");
+            grphdr.append("text")
+                .text("TOTAL SPEND")
+                .attr("x", pctColumnWidth/2)
+                .attr("y", 20)
+                .attr("class", "hdr-label")
+                .attr("text-anchor", "middle");
+        })
+        .fail(function(err) {
+            $("#grpSpendBar").text("Could not retrieve group spend data.");
+            console.log(JSON.stringify(err)); 
+        });
+    }
+    
+    function RenderSLAChart(year) {
+        var rect = document.getElementById("slaLine").getBoundingClientRect();
+        var xAxisLabelSpace = 50;
+        var yAxisLabelSpace = 50;
+        var topSpace = 10;
+        var rightSpace = 10;
+
+        var w = rect.width;
+        var h = w * 0.8;
+        var svg = d3.select("#slaLine")
+                    .append("svg")
+                    .attr("width", w)
+                    .attr("height", h);
+
+        var xScale;
+        var yScale;
+        var formatTime;
+        var xAxis;
+        var yAxis;
+        var cpiLine;
+        var kpiLine;
+
+        cpiDataset = [];
+        var cpiAvg = 0;
+        var allNull = true;
+        var cpiValue;
+        var cpiNull = false;
+        GetMetricColumns("CPI")
+        .done(function(data) {
+            $.each(data.d.results, function(i, d) {
+                if (supplierData[d.Column]) {
+                    allNull = false;
+                }
+                cpiValue = GetRoundValue(supplierData[d.Column] * 100, 1);
+                cpiDataset.push({
+                    "period": GetPeriod(d.Title.replace("CPI Monthly Average for ", ""), year),
+                    "value": cpiValue
+                });
+                cpiAvg += cpiValue;
+            });
+
+            // Calculate average and set it in display
+            if (allNull) {
+                $("#cpiMeasure").text("N/A");
+                cpiNull = true;
+            }
+            else {
+                cpiAvg = GetRoundValue((cpiAvg / 12), 0);
+                $("#cpiMeasure").text(cpiAvg + "%");
+            }
+
+            Date.prototype.addDays = function(days) {
+                var date = new Date(this.valueOf());
+                date.setDate(date.getDate() + days);
+                return date;
+            }
+
+            // Establish scales
+            xScale = d3.scaleTime()
+                            .domain([
+                                d3.min(cpiDataset, function(d) { 
+                                    return d.period;
+                                }).addDays(-15),
+                                d3.max(cpiDataset, function(d) {
+                                    return d.period;
+                                }).addDays(15)
+                            ])
+                            .range([yAxisLabelSpace, w - rightSpace]);
+            yScale = d3.scaleLinear()
+                            .domain([
+                                0,
+                                d3.max(cpiDataset, function(d) {
+                                    return d.value;
+                                })
+                            ])
+                            .range([h - xAxisLabelSpace, topSpace]);
+
+            // Establish time conversion for axis
+            formatTime = d3.timeFormat('%b-%y');
+            
+
+            // Define line generator
+            cpiLine = d3.line()
+                            .x(function(d) { return xScale(d.period); })
+                            .y(function(d) { return yScale(d.value); });
+
+            // Add background
+            var barWidth = (w - yAxisLabelSpace - rightSpace) / cpiDataset.length;
+            var bkgrp = svg.append("g")
+                            .attr("transform", "translate(" + yAxisLabelSpace + ", " + topSpace + ")");
+            bkgrp.selectAll("rect")
+                .data(cpiDataset)
+                .enter()
+                .append("rect")
+                .attr("x", function(d, i) {
+                    return i * (barWidth);
+                })
+                .attr("y", 0)
+                .attr("width", barWidth)
+                .attr("height", h - topSpace - xAxisLabelSpace)
+                .attr("class", "sla-bk-bar");
+
+            // Add CPI points and lines
+            if (!allNull) {
+                var cpigrp = svg.append("g");
+                cpigrp.append("path")
+                    .datum(cpiDataset)
+                    .attr("class", "cpi-line")
+                    .attr("d", cpiLine);
+
+                cpigrp.selectAll("circle")
+                    .data(cpiDataset)
+                    .enter()
+                    .append("circle")
+                    .attr("class", "cpi-point")
+                    .attr("cx", function(d) {
+                        return xScale(d.period);
+                    })
+                    .attr("cy", function(d) {
+                        return yScale(d.value);
+                    })
+                    .attr("r", 3);
+            }
+
+            kpiDataset = [];
+            var kpiAvg = 0;
+            allNull = true;
+            var kpiValue;
+            var kpiNull = false;
+            GetMetricColumns("KPI")
+            .done(function(data) {
+                $.each(data.d.results, function(i, d) {
+                    if (supplierData[d.Column]) {
+                        allNull = false;
+                    }
+                    kpiValue = GetRoundValue(supplierData[d.Column] * 100, 1)
+                    kpiDataset.push({
+                        "period": GetPeriod(d.Title.replace("KPI Monthly Average for ", ""), year),
+                        "value": kpiValue
+                    });
+                    kpiAvg += kpiValue;
+                });
+
+                yScale = d3.scaleLinear()
+                            .domain([0, 100])
+                            .range([h - xAxisLabelSpace, topSpace]);
+
+                // Calculate KPI average and set in display
+                if (allNull) {
+                    $("#kpiMeasure").text("N/A");
+                    kpiNull = true;
+                }
+                else {
+                    kpiAvg = GetRoundValue((kpiAvg / 12), 0);
+                    $("#kpiMeasure").text(kpiAvg + "%");
+                }
+
+                kpiLine = d3.line()
+                                .x(function(d) { return xScale(d.period); })
+                                .y(function(d) { return yScale(d.value); });
+
+                // Add KPI points and lines
+                if (!allNull) {
+                    var kpigrp = svg.append("g");
+                    kpigrp.append("path")
+                        .datum(kpiDataset)
+                        .attr("class", "kpi-line")
+                        .attr("d", kpiLine);
+
+                    kpigrp.selectAll("circle")
+                        .data(kpiDataset)
+                        .enter()
+                        .append("circle")
+                        .attr("class", "kpi-point")
+                        .attr("cx", function(d) {
+                            return xScale(d.period);
+                        })
+                        .attr("cy", function(d) {
+                            return yScale(d.value);
+                        })
+                        .attr("r", 3);
+                }
+
+                if (cpiNull && kpiNull) {
+                    svg.append("text")
+                        .text("No data available")
+                        .attr("x", (w)/2)
+                        .attr("y", (h) /2)
+                        .attr("text-anchor", "middle");
+                }
+
+                // Define axes
+                xAxis = d3.axisBottom()
+                                .scale(xScale)
+                                .tickFormat(formatTime);
+                yAxis = d3.axisLeft()
+                                .scale(yScale)
+                                .ticks(4);
+
+                // Add Axes
+                svg.append("g")
+                    .attr("class", "sla-x-axis")
+                    .attr("writing-mode", "tb-rl")
+                    .attr("transform", "translate(0, " + (h - xAxisLabelSpace) + ")")
+                    .call(xAxis);
+                svg.append("g")
+                    .attr("class", "sla-y-axis")
+                    .attr("transform", "translate(" + yAxisLabelSpace + ", 0)")
+                    .call(yAxis);
+            })
+            .fail(function(err) { console.log(JSON.stringify(err)); });
+        })
+        .fail(function(err) { console.log(JSON.stringify(err)); });
+
+        
+    }
+
+    function RenderCSATChart() {
+        var rect = document.getElementById("csatChart").getBoundingClientRect();
+        var w = rect.width;
+        var h = w * 0.9;
+        var leftMargin = 40;
+        var leftSpace = 10;
+        var rightSpace = 10;
+        var bottomMargin = 30;
+        var barTopSpace = 20;
+        var barBetweenSpace = 30;
+        var barBottomSpace = 20;
+        var svg = d3.select("#csatChart")
+                    .append("svg")
+                    .attr("width", w)
+                    .attr("height", h);
+
+        var secWidth = (w - leftMargin - leftSpace - rightSpace) / 10;
+
+        var xScale = d3.scaleLinear()
+                        .domain([0, 10])
+                        .range([leftMargin, w - rightSpace]);
+
+        var bargrp = svg.append("g")
+                        .attr("transform", "translate(" + leftMargin + ", 0)");
+        var barHeight = (h - barTopSpace - barBetweenSpace - barBottomSpace - bottomMargin) / 2;
+        var colStart = 50;
+        for (b = 0; b < 10; b++) {
+            var col = colStart + b * 20;
+            bargrp.append("rect")
+                .attr("x", b * secWidth)
+                .attr("y", barTopSpace)
+                .attr("width", secWidth)
+                .attr("height", barHeight)
+                .attr("class", "csat-bar")
+                .attr("fill", "rgb(" + col + ", " + col + ", " + col + ")");
+        }
+
+        var colStart = 50;
+        for (b = 0; b < 10; b++) {
+            var col = colStart + b * 20;
+            bargrp.append("rect")
+                .attr("x", b * secWidth)
+                .attr("y", barTopSpace + barHeight + barBetweenSpace)
+                .attr("width", secWidth)
+                .attr("height", barHeight)
+                .attr("class", "csat-bar")
+                .attr("fill", "rgb(" + col + ", " + col + ", " + col + ")");
+        }
+
+        var year = (new Date()).getFullYear();
+        var labelgrp = svg.append("g")
+        var pyLabel = labelgrp.append("text")
+                        .text("FY" + (year - 1).toString().substring(2))
+                        .attr("x", leftMargin - 5)
+                        .attr("y", barTopSpace + 10)
+                        .attr("class", "csat-label")
+                        .attr("text-anchor", "end");
+        var cyLabel = labelgrp.append("text")
+                        .text("FY" + year.toString().substring(2))
+                        .attr("x", leftMargin - 5)
+                        .attr("y", barTopSpace + barHeight + barBetweenSpace + 10)
+                        .attr("class", "csat-label")
+                        .attr("text-anchor", "end");
+
+        var linegrp = svg.append("g")
+                        .attr("transform", "translate(" + leftMargin + ", 0)");
+        for (l = 0; l < 11; l++) {
+            linegrp.append("line")
+                .attr("x1", l * secWidth)
+                .attr("y1", 0)
+                .attr("x2", l * secWidth)
+                .attr("y2", h - bottomMargin)
+                .attr("class", "csat-line");
+        }
+
+        var pointRadius = 24;
+        var ptgrp = svg.append("g");
+
+        pyCsatUrl = _spPageContextInfo.webAbsoluteUrl + "/_api/web/lists/getbytitle('IS Supplier Data')/items?$filter=Title eq '" + supplierData.Title + "' and Year eq '" + (year - 2).toString() + "'&$top=1";
+        $.ajax({
+            url: pyCsatUrl,
+            method: "GET",
+            headers: {
+                "accept": "application/json;odata=verbose"
+            },
+            async: false,
+            success: function(data) {
+                if (data.d.results.length > 0) {
+                    if (data.d.results[0].CSATEndOfYear == null) {
+                        pyVal = null;
+                    }
+                    else {
+                        var pyVal = GetRoundValue(parseFloat(data.d.results[0].CSATEndOfYear), 1);
+                    }
+                    if (pyVal && pyVal != NaN) {
+                        var pointAnchor = barTopSpace + (barHeight / 2);
+                        var circ = ptgrp.append("circle")
+                                    .attr("cx", leftMargin + (pyVal * secWidth))
+                                    .attr("cy", pointAnchor)
+                                    .attr("r", pointRadius)
+                                    .attr("class", "csat-point");
+                        ptgrp.append("text")
+                            .text(pyVal)
+                            .attr("x", leftMargin + (pyVal * secWidth))
+                            .attr("y", pointAnchor + 5)
+                            .attr("class", "csat-text")
+                            .attr("text-anchor", "middle");
+                    }
+                    else {
+                        ptgrp.append("text")
+                        .text("No data available")
+                        .attr("x", w/2)
+                        .attr("y", barTopSpace + (barHeight / 2) + 5)
+                        .attr("class", "csat-text")
+                        .attr("text-anchor", "middle");
+                    }
+                }
+            },
+            error: function(err) {
+                console.log(JSON.stringify(err));
+            }
+        });
+
+        var pointAnchor = barTopSpace + barHeight + barBetweenSpace + (barHeight / 2);
+        if (supplierData.CSATEndOfYear == null) {
+            cyVal = null;
+        }
+        else {
+            var cyVal = GetRoundValue(parseFloat(supplierData.CSATEndOfYear), 1);
+        }
+        if (cyVal && cyVal != NaN) {
+            var circ = ptgrp.append("circle")
+                        .attr("cx", leftMargin + (cyVal * secWidth))
+                        .attr("cy", pointAnchor)
+                        .attr("r", pointRadius)
+                        .attr("class", "csat-point");
+            ptgrp.append("text")
+                .text(cyVal)
+                .attr("x", leftMargin + (cyVal * secWidth))
+                .attr("y", pointAnchor + 5)
+                .attr("class", "csat-text")
+                .attr("text-anchor", "middle");
+        }
+        else {
+            ptgrp.append("text")
+                .text("No data available")
+                .attr("x", w/2)
+                .attr("y", pointAnchor + 5)
+                .attr("class", "csat-text")
+                .attr("text-anchor", "middle");
+        }
+
+        var emgrp = svg.append("g")
+                        .attr("transform", "translate(" + leftMargin.toString() + ", " + (h - bottomMargin).toString() + ")");
+        for (i = 0; i < 10; i++) {
+            emgrp.append("rect")
+                .attr("x", i * secWidth)
+                .attr("y", 0)
+                .attr("width", secWidth)
+                .attr("height", 20)
+                .attr("fill", GetCSATColor(i));
+        }
+
+        for (i = 0; i < 11; i++) {
+            emgrp.append("text")
+                .attr("x", i * secWidth)
+                .attr("y", 15)
+                .attr("text-anchor", "middle")
+                .text(i.toString())
+                .attr("class", "csat-nums");
+        }
+
+        // Add emojis
+        var picSet = [
+            {
+                "url": _spPageContextInfo.webAbsoluteUrl + "/SiteAssets/images/dead.png",
+                "pos": 0
+            },
+            {
+                "url": _spPageContextInfo.webAbsoluteUrl + "/SiteAssets/images/scared.png",
+                "pos": 3
+            },
+            {
+                "url": _spPageContextInfo.webAbsoluteUrl + "/SiteAssets/images/serious.png",
+                "pos": 6
+            },
+            {
+                "url": _spPageContextInfo.webAbsoluteUrl + "/SiteAssets/images/pleased.png",
+                "pos": 8
+            },
+            {
+                "url": _spPageContextInfo.webAbsoluteUrl + "/SiteAssets/images/loveit.png",
+                "pos": 10
+            }
+        ];
+
+        // var emojigrp = svg.append("g")
+        //                 .attr("id", "emojiGroup")
+        //                 .attr("transform", "translate(" + leftMargin.toString() + ", " + (h - bottomMargin + 30).toString() + ")");
+        $.each(picSet, function(i, emoji) {
+            $("#emojiGroup").append("<img src='" + emoji.url + "' width='20px' style='position: absolute; left: " + (leftMargin + (emoji.pos * secWidth)).toFixed(0) + "px;' />");
+        });
+        // emgrp.selectAll("image")
+        //         .data(picSet)
+        //         .enter()
+        //         .append("svg:image")
+        //         .attr("x", function(d, i) {
+        //             return (d.pos * secWidth) - 10;
+        //         })
+        //         .attr("y", 30)
+        //         .attr("width", 20)
+        //         .attr("xlink:href", function(d, i) {
+        //             return d.url;
+        //         });
+
+    }
+
+    function RenderOnTimePie() {
+        
+        var onTimeNumber = GetRoundValue(supplierData.PctOnTimeDelivery * 100, 1);
+        var dataset = [onTimeNumber, 100 - onTimeNumber];
+        //var dataset = [supplierData.PctOnTimeDelivery, 100 - supplierData.PctOnTimeDelivery];
+        var rect = document.getElementById("onTimePie").getBoundingClientRect();
+        var w = rect.width;
+        var h = w;
+
+        var svg = d3.select("#onTimePie")
+                    .append("svg")
+                    .attr("width", w)
+                    .attr("height", h)
+                    .attr("class", "grey-back");
+
+        if (supplierData.PctOnTimeDelivery == null) {
+            svg.append("text")
+                .text("No data available")
+                .attr("x", w/2)
+                .attr("y", h/2)
+                .attr("text-anchor", "middle");   
+            return;
+        }
+        
+        var gutter = 15;
+        var outerRadius = w * 0.4;
+        var innerRadius = outerRadius * 0.6;
+
+        var arc = d3.arc()
+                    .innerRadius(innerRadius)
+                    .outerRadius(outerRadius);
+
+        var pie = d3.pie();
+        var buffer = w * 0.1;
+        var piegrp = svg.append("g")
+                        .attr("transform", "translate(" + buffer + ", " + buffer + ")");
+        var arcs = piegrp.selectAll("g.arc")
+                    .data(pie(dataset))
+                    .enter()
+                    .append("g")
+                    .attr("class", "arc")
+                    .attr("transform", "translate(" + outerRadius + ", " + outerRadius + ")");
+
+        arcs.append("path")
+            .attr("fill", function(d, i) {
+                return GetOnTimeColor(i);
+            })
+            .attr("d", arc);
+
+        svg.append("text")
+            .text("ON-TIME " + onTimeNumber + "%")
+            .attr("x", w/2 + 10)
+            .attr("y", 20)
+            .attr("text-anchor", "start")
+            .attr("class", "green-text");
+
+        svg.append("text")
+            .text("OVER-DUE " + GetRoundValue(100 - onTimeNumber, 1) + "%")
+            .attr("x", w/2 - 10)
+            .attr("y", 20)
+            .attr("text-anchor", "end")
+            .attr("class", "red-text");
+    }
+
+    $(document).ready(function() {
+        var supplierId = GetQueryStringParameter("id");
+        var year = GetQueryStringParameter("yr");
+        if (!year) {
+            year = GetConfigurationValue("ActiveYear");
+            if (!year) {
+                year = (new Date()).getFullYear() - 1;
+            }
+        }
+        
+        GetSupplierRecord(supplierId, year).done(function(data) {
+            supplierData = data.d.results[0];
+            
+            // Get metrics information
+            // GetMetrics().done(function(data) {
+            //     metrics = data.d.results;
+                
+                // Render supplier details
+                // 1 - Supplier name
+                $("#vendorTitle").text(supplierData.Title);
+                // 2 - Reporting year
+                $("#reportingPeriod").text(supplierData.Year);
+                // 3 - Supplier health
+                $("#supplierHealth").html(GetHealthDisplay(supplierData.OverallHealthIndicator));
+                // 4 - Vendor Segment
+                $("#vendorSegment").text(supplierData.CYAssignedSegment);
+                // 5 - Vendor Category
+                $("#vendorCategory").text(GetSupplierCategory(supplierData.CatHW, supplierData.CatSvc, supplierData.CatSW, supplierData.CatOth));
+
+                // Render Total Spend for the past 12 months
+                // var spendMetric = GetMetric(metrics, "TOTAL_SPEND");
+                // if (spendMetric) {
+                    //$("#totalSpendValue").html(GetFormattedString(supplierData.TotalSpend, "${0.0}M"))
+                    $("#totalSpendValue").html("$" + GetRoundValue(supplierData.TotalSpend / 1000000, 3) + "M");
+                // }
+
+                // Render Percent of IS total spend pie chart
+                RenderPctISTotalSpendChart();
+                
+                // Render quarterly spends
+                RenderQuarterlySpendChart(year);
+
+                // Add Supplier Revenue number
+                if (supplierData.TotalSupRev12Months != null) {
+                    $("#supRevValue").text(accounting.formatMoney((supplierData.TotalSupRev12Months / 1000000).toFixed(0)));
+                }
+                
+                // Render Supplier Revenue pie chart
+                RenderSupplierRevenueChart();
+
+                // Render Group-wise spend breakdown chart
+                RenderGroupSpendChart();
+
+                // Render Performance Charts
+
+                // Render SLA Chart
+                RenderSLAChart(year);
+
+                // Render CSAT
+                RenderCSATChart();
+
+                // Render On Time Delivery Chart
+                RenderOnTimePie();
+
+            // }).fail(function(err) { console.log(JSON.stringify(err)); });
+        }).fail(function(err) { console.log(JSON.stringify(err)) });
+    });
+</script>

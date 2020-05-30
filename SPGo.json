@@ -1,6 +1,6 @@
 {
     "sourceDirectory": "src",
-    "sharePointSiteUrl": "https://slalomchicandc.sharepoint.com/sites/astellasvsm",
+    "sharePointSiteUrl": "https://slalomchicandc.sharepoint.com/sites/astellasvsm/supscore",
     "publishingScope": "SaveOnly",
     "authenticationType": "Digest"
 }
